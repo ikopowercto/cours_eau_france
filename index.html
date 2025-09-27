@@ -6,98 +6,114 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body { margin:0; padding:0; height:100%; }
-    #map { width:100%; height:100%; }
-    .leaflet-popup-content { font-family: Arial, sans-serif; font-size: 13px; line-height: 1.4; }
-
-    /* Message overlay */
+    html, body {margin:0; padding:0; height:100%; font-family:Arial, sans-serif; display:flex; flex-direction:column;}
+    .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15); z-index:1000;}
+    .header img {height:50px; margin-bottom:5px;}
+    .header h1 {margin:0; font-size:20px; color:#2c3e50;}
+    .header p {font-size:13px; color:#555;}
+    .coords-form {margin-top:8px;}
+    .coords-form input {padding:4px; margin:0 4px; width:200px; font-size:13px;}
+    .coords-form button {padding:5px 10px; font-size:13px; cursor:pointer;}
+    #map {flex:1; width:100%; position:relative;}
     #message {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff8dc;
-      border: 1px solid #f0e68c;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 1200;
+      position:absolute; top:10px; left:50%; transform:translateX(-50%);
+      background:#fff8dc; border:1px solid #f0e68c; padding:6px 12px;
+      border-radius:4px; font-size:13px; display:flex; align-items:center; gap:8px; z-index:1200;
     }
-    .loader {
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #555;
-      border-radius: 50%;
-      width: 12px;
-      height: 12px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+    .loader {border:2px solid #f3f3f3; border-top:2px solid #555; border-radius:50%; width:12px; height:12px; animation: spin 1s linear infinite;}
+    @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    footer {padding:6px; font-size:12px; font-weight:bold; color:#444; background:#eee; width:100%; text-align:center; border-top:1px solid #ccc;}
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <!-- Overlay message -->
-  <div id="message"><div class="loader"></div> ⏳ Chargement des cours d’eau depuis le Sandre...</div>
+  <!-- Header -->
+  <div class="header">
+    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
+    <h1>Carte interactive • Cours d’eau (Sandre ETH)</h1>
+    <p>Cliquez sur un cours d’eau pour voir son code et son nom officiel</p>
+    <div class="coords-form">
+      <label>Coordonnées (lat, lon) : 
+        <input type="text" id="coords" placeholder="Ex: 47.0, 3.5">
+      </label>
+      <button onclick="goToCoords()">Aller</button>
+    </div>
+  </div>
+
+  <!-- Carte -->
+  <div id="map">
+    <div id="message"><div class="loader"></div> ⏳ Chargement des cours d’eau depuis le Sandre...</div>
+  </div>
+
+  <!-- Footer -->
+  <footer>© 2025 IKO Power • Carte interactive client</footer>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialiser la carte
     var map = L.map('map').setView([46.5, 2], 6);
 
-    // Fond cartographique
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL ETH
+    // URL ETH (⚠️ très lourd si non filtré)
     const urlETH = "https://services.sandre.eaufrance.fr/geo/eth?" +
                    "service=WFS&version=2.0.0&request=GetFeature&" +
                    "typenames=sa:CoursEau&" +
                    "srsName=EPSG:4326&" +
                    "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style cours d'eau
     function styleCours() { return { color: "blue", weight: 1 }; }
 
-    // Popup
     function popupCours(feature, layer) {
       let p = feature.properties;
-      layer.bindPopup(`<b>Code : </b>${p.CdEntiteHydrographique || "?"}<br/>
-                       <b>Nom  : </b>${p.NomEntiteHydrographique || "?"}`);
+      layer.bindPopup(`<b>Code :</b> ${p.CdEntiteHydrographique || "?"}<br/>
+                       <b>Nom :</b> ${p.NomEntiteHydrographique || "?"}`);
     }
 
-    // Message overlay
     const messageDiv = document.getElementById("message");
 
-    // Téléchargement des données
-    fetch(urlETH)
-      .then(r => r.json())
-      .then(data => {
-        L.geoJSON(data, {
-          style: styleCours,
-          onEachFeature: popupCours
-        }).addTo(map);
+    // Charger données ETH
+    fetch(urlETH).then(r => r.json()).then(data => {
+      L.geoJSON(data, {style: styleCours, onEachFeature: popupCours}).addTo(map);
 
-        // Mise à jour du message (succès)
-        messageDiv.innerHTML = "✅ Cours d’eau chargés avec succès";
-        messageDiv.style.background = "#e6ffe6";
-        messageDiv.style.border = "1px solid #7cfc00";
-        messageDiv.style.color = "darkgreen";
+      // Succès
+      messageDiv.innerHTML = "✅ Cours d’eau chargés avec succès";
+      messageDiv.style.background = "#e6ffe6";
+      messageDiv.style.border = "1px solid #7cfc00";
+      messageDiv.style.color = "darkgreen";
+      setTimeout(() => messageDiv.style.display = "none", 3000);
+    }).catch(err => {
+      console.error("Erreur WFS ETH:", err);
+      messageDiv.innerHTML = "⚠️ Erreur lors du chargement des cours d’eau";
+      messageDiv.style.background = "#ffe6e6";
+      messageDiv.style.border = "1px solid #ff4d4d";
+      messageDiv.style.color = "darkred";
+    });
 
-        // Faire disparaître le message après 3 secondes
-        setTimeout(() => messageDiv.style.display = "none", 3000);
-      })
-      .catch(err => {
-        console.error("Erreur WFS ETH:", err);
-        messageDiv.innerHTML = "⚠️ Erreur de chargement des cours d’eau";
-        messageDiv.style.background = "#ffe6e6";
-        messageDiv.style.border = "1px solid #ff4d4d";
-        messageDiv.style.color = "darkred";
-      });
+    // Fonction zoom vers coordonnées
+    function goToCoords() {
+      let input = document.getElementById("coords").value.trim();
+      if (!input) { alert("Merci de saisir des coordonnées (lat, lon)."); return; }
+
+      // Séparer par virgule, espace ou point-virgule
+      let parts = input.split(/[,; ]+/);
+      if (parts.length < 2) { 
+        alert("Format attendu : latitude, longitude (Ex: 47.0, 3.5)"); 
+        return;
+      }
+
+      let lat = parseFloat(parts[0]);
+      let lon = parseFloat(parts[1]);
+
+      if (isNaN(lat) || isNaN(lon)) {
+        alert("Coordonnées invalides. Exemple : 47.0, 3.5");
+        return;
+      }
+
+      map.setView([lat, lon], 12);
+      L.popup().setLatLng([lat, lon]).setContent("📍 Zoom sur ce point").openOn(map);
+    }
   </script>
 </body>
 </html>
