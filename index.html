@@ -2,53 +2,63 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Carte interactive • Cours d’eau (Sandre ETH)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/> 
+  <title>Carte interactive • Cours d’eau TOPOAGE 2024</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%; display:flex; flex-direction:column; font-family:Arial,sans-serif;}
+    html, body {margin:0; padding:0; height:100%; font-family:Arial,sans-serif;}
     .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
-    .header img {height:50px; margin:0 auto 8px;}
-    #map {flex:1; width:100%; position:relative;}
-    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#fff8dc;
-      border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; z-index:1200;}
+    .header img {height:50px; margin-bottom:5px;}
+    #map {width:100%; height:calc(100% - 140px);}
+    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%);
+      background:#fff8dc; border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; z-index:1200;}
     .legend {position:absolute; bottom:10px; right:10px; background:white; padding:6px 10px; border-radius:4px; font-size:12px;
       box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1200;}
-    .legend i{width:14px;height:14px;display:inline-block;margin-right:6px;}
-    footer {text-align:center; padding:6px; font-size:12px; background:#eee; border-top:1px solid #ccc;}
+    footer {text-align:center; padding:6px; font-size:12px; background:#eee;}
   </style>
 </head>
 <body>
   <div class="header">
-    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
-    <h1>Carte interactive • Cours d’eau (Sandre ETH)</h1>
-    <p>Cliquez sur un cours d’eau pour voir son code Sandre et son nom officiel.</p>
+    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png"/>
+    <h1>Carte interactive • Cours d’eau TOPOAGE 2024</h1>
+    <p>Cliquez sur un cours d’eau pour obtenir son code Sandre et son nom officiel.</p>
   </div>
+
   <div id="map">
     <div id="message" class="map-message">⏳ Chargement des données...</div>
-    <div class="legend">
-      <div><i style="background:blue"></i> Cours d’eau (ETH)</div>
-    </div>
+    <div class="legend"><div><i style="background:blue"></i> Cours d’eau</div></div>
   </div>
+
   <footer>© 2025 IKO Power • Carte interactive client</footer>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map').setView([46.5,2], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+    var map = L.map('map').setView([47.8, 3.3], 10); // Département Yonne
 
-    // ⚠️ ATTENTION : très volumineux sur toute la France, on recommande de tester avec une bbox
-    const urlETH="https://services.sandre.eaufrance.fr/geo/eth?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:CoursEau&srsName=EPSG:4326&bbox=2.9,47.6,3.8,48.3,EPSG:4326&outputFormat=application/json%3B%20subtype=geojson";
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
+
+    // URL TOPOAGE filtrée par BBOX (ici limites Yonne approximatives)
+    const urlTopo = "https://services.sandre.eaufrance.fr/geo/topage2024?" +
+      "service=WFS&version=2.0.0&request=GetFeature&" +
+      "typenames=sa:CoursEau&" +
+      "srsName=EPSG:4326&" +
+      "bbox=2.9,47.6,3.8,48.3,EPSG:4326&" +
+      "outputFormat=application/json%3B%20subtype=geojson";
 
     function styleCours(){ return {color:"blue", weight:1}; }
+
     function popupCours(f,l){
-      l.bindPopup(`<b>Code :</b> ${f.properties.CdEntiteHydrographique||"?"}<br/>
-                   <b>Nom :</b> ${f.properties.NomEntiteHydrographique||"?"}`);
+      let p=f.properties;
+      l.bindPopup(`<b>Code :</b> ${p.CdEntiteHydrographique||"?"}<br/>
+                   <b>Nom :</b> ${p.NomEntiteHydrographique||"?"}`);
     }
 
-    fetch(urlETH).then(r=>r.json()).then(data=>{
+    fetch(urlTopo).then(r=>r.json()).then(data=>{
       L.geoJSON(data,{style:styleCours,onEachFeature:popupCours}).addTo(map);
-      document.getElementById("message").innerHTML="✅ Données chargées";
+      document.getElementById("message").innerHTML="✅ Données TOPOAGE chargées";
     }).catch(e=>{
+      console.error(e);
       document.getElementById("message").innerHTML="⚠️ Erreur de chargement";
     });
   </script>
