@@ -2,65 +2,54 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Carte interactive • Cours d’eau TOPOAGE 2024</title>
+  <title>Cours d’eau TOPOAGE 2024</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%; font-family:Arial,sans-serif;}
-    .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
-    .header img {height:50px; margin-bottom:5px;}
-    #map {width:100%; height:calc(100% - 140px);}
-    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%);
-      background:#fff8dc; border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; z-index:1200;}
-    .legend {position:absolute; bottom:10px; right:10px; background:white; padding:6px 10px; border-radius:4px; font-size:12px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1200;}
-    footer {text-align:center; padding:6px; font-size:12px; background:#eee;}
+    html, body {margin:0; height:100%;}
+    #map {height:100%; width:100%;}
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png"/>
-    <h1>Carte interactive • Cours d’eau TOPOAGE 2024</h1>
-    <p>Cliquez sur un cours d’eau pour obtenir son code Sandre et son nom officiel.</p>
-  </div>
-
-  <div id="map">
-    <div id="message" class="map-message">⏳ Chargement des données...</div>
-    <div class="legend"><div><i style="background:blue"></i> Cours d’eau</div></div>
-  </div>
-
-  <footer>© 2025 IKO Power • Carte interactive client</footer>
-
+  <div id="map"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map').setView([47.8, 3.3], 10); // Département Yonne
+    var map = L.map('map').setView([47.8,3.3], 10);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution:"© OpenStreetMap"
+    }).addTo(map);
 
-    // URL TOPOAGE filtrée par BBOX (ici limites Yonne approximatives)
+    // BBOX Yonne pour test
     const urlTopo = "https://services.sandre.eaufrance.fr/geo/topage2024?" +
       "service=WFS&version=2.0.0&request=GetFeature&" +
-      "typenames=sa:CoursEau&" +
+      "typenames=sa:CoursEau&" + 
       "srsName=EPSG:4326&" +
-      "bbox=2.9,47.6,3.8,48.3,EPSG:4326&" +
+      "bbox=2.9,47.6,3.8,48.3,EPSG:4326&" + 
       "outputFormat=application/json%3B%20subtype=geojson";
 
-    function styleCours(){ return {color:"blue", weight:1}; }
+    console.log("Appel WFS:", urlTopo);
 
-    function popupCours(f,l){
-      let p=f.properties;
-      l.bindPopup(`<b>Code :</b> ${p.CdEntiteHydrographique||"?"}<br/>
-                   <b>Nom :</b> ${p.NomEntiteHydrographique||"?"}`);
-    }
-
-    fetch(urlTopo).then(r=>r.json()).then(data=>{
-      L.geoJSON(data,{style:styleCours,onEachFeature:popupCours}).addTo(map);
-      document.getElementById("message").innerHTML="✅ Données TOPOAGE chargées";
-    }).catch(e=>{
-      console.error(e);
-      document.getElementById("message").innerHTML="⚠️ Erreur de chargement";
-    });
+    fetch(urlTopo)
+      .then(r=>{
+        console.log("Réponse brute:", r);
+        return r.json();
+      })
+      .then(data=>{
+        console.log("Features reçues:", data.features ? data.features.length : "pas de features");
+        L.geoJSON(data, {
+          style: {color:"blue", weight:1},
+          onEachFeature: (f,l)=>{
+            let p=f.properties;
+            l.bindPopup(`<b>Code :</b> ${p.CdEntiteHydrographique||"?"}<br/>
+                         <b>Nom :</b> ${p.NomEntiteHydrographique||"?"}`);
+          }
+        }).addTo(map);
+      })
+      .catch(e=>{
+        console.error("Erreur chargement TOPOAGE:", e);
+        alert("Erreur de chargement TOPOAGE, voir console");
+      });
   </script>
 </body>
 </html>
